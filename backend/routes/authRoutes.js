@@ -15,7 +15,10 @@ router.post('/login', async (req, res) => {
 
   const result = await login(email, password);
   if (result.success) {
-    res.json({ token: result.token });
+    res.json({
+      token: result.token,
+      user: result.user
+    });
   } else {
     res.status(401).json({ message: result.message });
   }

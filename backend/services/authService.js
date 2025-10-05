@@ -1,15 +1,19 @@
 // backend/services/authService.js
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database'); // Changed from config/env
-const { jwtSecret } = require('../config/env');
+const { sql } = require('../config/database');
+const { JWT_SECRET } = require('../config/env');
 
 async function login(email, password) {
   try {
-    // Fetch user
-    const userQuery = 'SELECT * FROM users WHERE email = $1';
-    const userResult = await pool.query(userQuery, [email]);
-    const user = userResult.rows[0];
+    // Fetch user with role information and password_hash
+    const userResult = await sql`
+      SELECT u.id, u.email, u.password_hash, u.role_id, r.name as role_name, u.created_at, u.updated_at 
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.email = ${email}
+    `;
+    const user = userResult[0]; // Neon returns array of objects
 
     if (!user) {
       return { success: false, message: 'User not found' };
@@ -23,21 +27,31 @@ async function login(email, password) {
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user.id, email: user.email, roleId: user.role_id },
-      jwtSecret,
+      { userId: user.id, email: user.email, roleId: user.role_id, roleName: user.role_name },
+      JWT_SECRET,
       { expiresIn: '1h' }
     );
 
     // Store token in tokens table
-    const tokenQuery = `
-      INSERT INTO tokens (user_id, token, expires_at)
-      VALUES ($1, $2, $3)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    await sql`
+      INSERT INTO tokens (user_id, token, expires_at) 
+      VALUES (${user.id}, ${token}, ${expiresAt}) 
       RETURNING id
     `;
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    await pool.query(tokenQuery, [user.id, token, expiresAt]);
 
-    return { success: true, token };
+    // Return user data and token
+    return {
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role_name,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }
+    };
   } catch (error) {
     console.error('Login error:', error.message);
     return { success: false, message: 'Server error' };

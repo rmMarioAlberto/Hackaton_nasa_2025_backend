@@ -1,5 +1,5 @@
 // backend/config/database.js
-const { Pool } = require('pg');
+const { neon } = require('@neondatabase/serverless');
 const mongoose = require('mongoose');
 const { POSTGRES_URL, MONGO_URL } = require('./env');
 
@@ -13,22 +13,12 @@ if (!MONGO_URL) {
   throw new Error('MONGO_URL is undefined. Check .env file.');
 }
 
-const pool = new Pool({
-  connectionString: POSTGRES_URL.replace('&channel_binding=require', ''), // Remove channel_binding
-  ssl: {
-    require: true,
-    rejectUnauthorized: false, // Neon compatibility
-  },
-  max: 20, // Increase pool size for Neon
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 2000, // Timeout after 2s
-});
+const sql = neon(POSTGRES_URL);
 
 const connectPostgres = async () => {
   try {
-    const client = await pool.connect();
-    console.log('PostgreSQL connected');
-    client.release();
+    const result = await sql`SELECT version()`;
+    console.log('PostgreSQL connected:', result[0].version);
   } catch (error) {
     console.error('PostgreSQL connection error:', error.message);
     throw error;
@@ -45,4 +35,4 @@ const connectMongo = async () => {
   }
 };
 
-module.exports = { pool, connectPostgres, connectMongo };
+module.exports = { sql, connectPostgres, connectMongo };

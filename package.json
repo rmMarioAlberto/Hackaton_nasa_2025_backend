@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/rmMarioAlberto/Hackaton_nasa_2025_backend#readme",
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "bcrypt": "^6.0.0",
     "csv-parse": "^6.1.0",
     "dotenv": "^17.2.3",
