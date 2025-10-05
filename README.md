@@ -123,7 +123,7 @@ With missions like **TESS** observing over **200,000 stars**, ExoAI accelerates 
 
 ## 👥 Contributors
 
-Developed during the **NASA Space Apps Challenge** by Team **[Your Team Name Here]**  
+Developed during the **NASA Space Apps Challenge** by Team **[EXO-BREN]**  
 - [Beto]  
 - [Angel]  
 - [Irving]  
