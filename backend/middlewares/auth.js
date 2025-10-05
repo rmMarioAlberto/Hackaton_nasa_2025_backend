@@ -1,19 +1,30 @@
+// backend/middlewares/auth.js
 const jwt = require('jsonwebtoken');
-const env = require('../config/env');
+const { pool } = require('../config/database'); // Changed from config/env
+const { jwtSecret } = require('../config/env');
 
-const auth = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+async function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
+    return res.status(401).json({ message: 'No token provided' });
   }
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    // Verify JWT
+    const decoded = jwt.verify(token, jwtSecret);
+
+    // Check token in tokens table
+    const tokenQuery = 'SELECT * FROM tokens WHERE token = $1 AND expires_at > NOW()';
+    const tokenResult = await pool.query(tokenQuery, [token]);
+    if (tokenResult.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ message: 'Invalid token' });
   }
-};
+}
 
-module.exports = auth;
+module.exports = { verifyToken };
