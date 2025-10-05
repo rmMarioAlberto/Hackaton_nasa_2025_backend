@@ -17,24 +17,26 @@ async function getExoplanets(req, res) {
     const db = mongoose.connection.useDb('hackaton');
     const collection = db.collection('planetas');
 
-    console.log('Fetching exoplanets from planetas collection...'); // Debug log
-    console.log('Limit:', limit, 'Skip:', skip);
+    console.log('Fetching exoplanets - Page:', page, 'Skip:', skip, 'Limit:', limit);
     
-    // Por alguna razón retorna todos los registros, ignorando el skip y limit
-    const allExoplanets = await collection.find()
+    // Try MongoDB pagination first
+    let exoplanets = await collection
+    .find({})
     .skip(skip)
     .limit(limit)
     .toArray();
     
-    const total = allExoplanets.length; // Total number of exoplanets in the collection
-
-    // Manual pagination by slicing the array
-    const exoplanets = allExoplanets.slice(skip, skip + limit);
+    const total = exoplanets.length;
     
-    console.log(`Found ${exoplanets.length} exoplanets returned, total: ${total}, page ${page}`); // Debug log
-    console.log(`About to send response with ${exoplanets.length} items in data array`); // Debug log
+    // Safety check: if MongoDB returns more than expected, slice manually
+    if (exoplanets.length > limit) {
+      console.warn(`MongoDB returned ${exoplanets.length} docs, expected ${limit}. Applying manual slice.`);
+      exoplanets = exoplanets.slice(0, limit);
+    }
+    
+    console.log(`Returning ${exoplanets.length} of ${total} total exoplanets`);
 
-    const response = {
+    res.status(200).json({
       data: exoplanets,
       pagination: {
         currentPage: page,
@@ -42,10 +44,7 @@ async function getExoplanets(req, res) {
         totalItems: total,
         itemsPerPage: limit
       }
-    };
-    
-    console.log(`Response data length: ${response.data.length}`); // Verify before sending
-    res.status(200).json(response);
+    });
   } catch (error) {
     console.error('Error fetching exoplanets:', error.message);
     res.status(500).json({ message: 'Internal server error', error: error.message });
@@ -59,6 +58,8 @@ async function searchExoplanets(req, res) {
     if (mongoose.connection.readyState !== 1) {
       await configBD.connectMongo();
     }
+
+    console.log('Search params received:', req.query);
 
     const query = {};
 
@@ -121,13 +122,51 @@ async function searchExoplanets(req, res) {
     const db = mongoose.connection.useDb('hackaton');
     const collection = db.collection('planetas');
 
-    console.log('Searching exoplanets with query:', JSON.stringify(query)); // Debug log
-    const exoplanets = await collection.find(query).toArray();
-    console.log(`Found ${exoplanets.length} exoplanets matching query`); // Debug log
+    console.log('MongoDB query built:', JSON.stringify(query));
+    
+    // Get all documents and filter manually since MongoDB queries seem to be ignored
+    const allExoplanets = await collection.find({}).toArray();
+    console.log(`Total documents in collection: ${allExoplanets.length}`);
+    
+    // Manual filtering
+    let filteredExoplanets = allExoplanets;
+    
+    if (Object.keys(query).length > 0) {
+      filteredExoplanets = allExoplanets.filter(doc => {
+        for (const [key, condition] of Object.entries(query)) {
+          const value = doc[key];
+          
+          // Handle regex (string fields)
+          if (condition.$regex) {
+            const regex = new RegExp(condition.$regex, condition.$options || '');
+            if (!value || !regex.test(String(value))) {
+              return false;
+            }
+          }
+          // Handle range queries (numeric fields)
+          else if (condition.$gte !== undefined || condition.$lte !== undefined) {
+            const numValue = Number(value);
+            if (isNaN(numValue)) return false;
+            if (condition.$gte !== undefined && numValue < condition.$gte) return false;
+            if (condition.$lte !== undefined && numValue > condition.$lte) return false;
+          }
+          // Handle exact match
+          else {
+            if (value !== condition) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+    }
+    
+    console.log(`Filtered to ${filteredExoplanets.length} exoplanets`);
 
     res.status(200).json({
-      data: exoplanets,
-      totalItems: exoplanets.length
+      data: filteredExoplanets,
+      totalItems: filteredExoplanets.length,
+      appliedFilters: query
     });
   } catch (error) {
     console.error('Error searching exoplanets:', error.message);
