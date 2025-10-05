@@ -1,7 +1,7 @@
 require('dotenv').config({ path: './.env' });
 const express = require('express');
 const { connectPostgres, connectMongo } = require('./backend/config/database');
-// const exoplanetRoutes = require('./backend/routes/exoplanetRoutes');
+const exoplanetRoutes = require('./backend/routes/exoplanetRoutes');
 const chatbotRoutes = require('./backend/routes/chatbotRoutes');
 const authRoutes = require('./backend/routes/authRoutes');
 
@@ -14,7 +14,7 @@ connectPostgres();
 connectMongo();
 
 // Rutas
-// app.use('/api/exoplanets', exoplanetRoutes);
+app.use('/api/exoplanets', exoplanetRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/auth', authRoutes);
 
