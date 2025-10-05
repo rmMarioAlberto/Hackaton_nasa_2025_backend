@@ -3,7 +3,7 @@ const router = express.Router();
 
 // --- CORRECCIÓN ---
 // Se ajusta la ruta para que busque la carpeta 'models' un nivel arriba.
-const Exoplanet = require('../models/mongodb/ChatLog'); 
+const Exoplanet = require('../models/ChatLog'); 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
