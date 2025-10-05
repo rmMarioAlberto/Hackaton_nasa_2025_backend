@@ -54,8 +54,28 @@ const agregarPlanetas = async (req, res) => {
             });
         }
 
-        const thresholds = latestLearningData[0].refutedThresholds;
-        const confirmedThresholds = latestLearningData[0].CONFIRMED;
+        const confirmedData = latestLearningData[0].CONFIRMED;
+
+        // Calcular pesos basados en la inversa de la desviación estándar
+        const weights = {};
+        let weightSum = 0;
+        for (const field of FIELDS_TO_ANALYZE_2) {
+            if (confirmedData[field] && confirmedData[field].parametros && confirmedData[field].parametros.desviacionEstandar) {
+                weights[field] = 1 / confirmedData[field].parametros.desviacionEstandar;
+                weightSum += weights[field];
+            } else {
+                weights[field] = 0; // En caso de datos faltantes
+            }
+        }
+
+        // Normalizar pesos
+        for (const field of FIELDS_TO_ANALYZE_2) {
+            if (weightSum > 0) {
+                weights[field] = weights[field] / weightSum;
+            } else {
+                weights[field] = 1 / FIELDS_TO_ANALYZE_2.length; // Peso uniforme si no hay datos
+            }
+        }
 
         // Contadores para el resumen
         let insertedCount = 0;
@@ -79,10 +99,10 @@ const agregarPlanetas = async (req, res) => {
 
             // Validar campos requeridos para la clasificación
             for (const field of FIELDS_TO_ANALYZE_2) {
-                if (!planet.hasOwnProperty(field) || 
-                    planet[field] === null || 
-                    planet[field] === undefined || 
-                    isNaN(parseFloat(planet[field])) || 
+                if (!planet.hasOwnProperty(field) ||
+                    planet[field] === null ||
+                    planet[field] === undefined ||
+                    isNaN(parseFloat(planet[field])) ||
                     !isFinite(parseFloat(planet[field]))) {
                     isValid = false;
                     break;
@@ -96,44 +116,25 @@ const agregarPlanetas = async (req, res) => {
                 continue;
             }
 
-            // Determinar disposition
-            let isRefuted = false;
-            let isConfirmed = true;
-
+            // Calcular puntaje ponderado
+            let score = 0;
             for (const field of FIELDS_TO_ANALYZE_2) {
                 const value = planetData[field];
-                const refutedThreshold = thresholds[field];
-                const confirmedThreshold = confirmedThresholds[field];
-
-                if (!refutedThreshold || !confirmedThreshold) {
-                    isValid = false;
-                    break;
-                }
-
-                // Verificar si el valor está fuera de los umbrales de CANDIDATE (REFUTED)
-                if (value < refutedThreshold.limiteInferior || value > refutedThreshold.limiteSuperior) {
-                    isRefuted = true;
-                    break;
-                }
-
-                // Verificar si el valor está dentro de los umbrales de CONFIRMED
-                if (value < confirmedThreshold.rangos.limiteInferior || value > confirmedThreshold.rangos.limiteSuperior) {
-                    isConfirmed = false;
-                }
+                const mean = confirmedData[field]?.parametros?.media || 0;
+                const stdDev = confirmedData[field]?.parametros?.desviacionEstandar || 1;
+                const normalizedDeviation = Math.abs((value - mean) / stdDev);
+                score += weights[field] * normalizedDeviation;
             }
 
-            if (!isValid) {
-                skippedCount++;
-                continue;
-            }
-
-            // Asignar disposition
-            if (isRefuted) {
-                planetData.disposition = 'REFUTED';
-                refutedCount++;
-            } else if (isConfirmed) {
+            // Asignar disposition basado en el puntaje
+            const confirmedThreshold = 0.5; // Umbral para CONFIRMED (valores cercanos a la media)
+            const refutedThreshold = 2.0;  // Umbral para REFUTED (valores extremos)
+            if (score <= confirmedThreshold) {
                 planetData.disposition = 'CONFIRMED';
                 confirmedCount++;
+            } else if (score > refutedThreshold) {
+                planetData.disposition = 'REFUTED';
+                refutedCount++;
             } else {
                 planetData.disposition = 'CANDIDATE';
                 candidateCount++;
@@ -170,7 +171,6 @@ const agregarPlanetas = async (req, res) => {
         });
     }
 };
-
 
 
 
