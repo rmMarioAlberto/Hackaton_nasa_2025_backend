@@ -8,6 +8,9 @@
     // const chatbotRoutes = require('./backend/routes/chatbotRoutes');
     const authRoutes = require('./backend/routes/authRoutes');
     const chatbotRoutes = require('./backend/routes/chatbotRoutes');
+
+    const agregarPlanetaRoutes = require('./backend/routes/agregarPlanetasRoutes');
+
     const app = express();
 
     // Middlewares
@@ -22,6 +25,8 @@
     app.use('/api/exoplanets', exoplanetRoutes);
     app.use('/api/chatbot', chatbotRoutes);
     app.use('/api/auth', authRoutes);
+
+    app.use("/api/planetas", agregarPlanetaRoutes);
 
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
