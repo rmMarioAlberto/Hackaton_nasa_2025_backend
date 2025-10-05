@@ -1,11 +1,13 @@
 const { Sequelize } = require('sequelize');
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: './.env' });
+
+const sequelize = new Sequelize(process.env.POSTGRES_URL, {
+  dialect: 'postgres',
+  logging: false,
+});
 
 const connectPostgres = async () => {
-  const sequelize = new Sequelize(process.env.POSTGRES_URL, {
-    dialect: 'postgres',
-  });
   try {
     await sequelize.authenticate();
     console.log('PostgreSQL connected');
@@ -26,4 +28,4 @@ const connectMongo = async () => {
   }
 };
 
-module.exports = { connectPostgres, connectMongo };
+module.exports = { sequelize, connectPostgres, connectMongo };
