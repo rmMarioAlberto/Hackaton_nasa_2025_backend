@@ -32,7 +32,7 @@ Our model is trained using **NASA’s official exoplanet archive**, which contai
 
 ExoAI operates as a **three-tier system** combining prediction, validation, and education:
 
-### 🧩 1. Algorithm (Python)
+### 🧩 1. Algorithm 
 - Uses NASA’s dataset of confirmed exoplanets and candidates.  
 - Calculates two average sets across 9 key parameters for confirmed and candidate objects.  
 - Applies a **Gaussian bell curve** to classify new data uploads as:
@@ -93,7 +93,7 @@ With missions like **TESS** observing over **200,000 stars**, ExoAI accelerates 
 | **Backend** | Node.js + Express |
 | **Frontend** | React.js |
 | **Database** | MongoDB |
-| **AI/ML** | Python (data preprocessing, Gaussian analysis, CSV parsing) |
+| **AI/ML** | Node.js (data preprocessing, Gaussian analysis, CSV parsing) |
 | **Chatbot** | LLM API integration |
 | **Data Source** | NASA Exoplanet Archive (~4,000 confirmed planets, 230+ parameters) |
 
@@ -124,7 +124,7 @@ With missions like **TESS** observing over **200,000 stars**, ExoAI accelerates 
 ## 👥 Contributors
 
 Developed during the **NASA Space Apps Challenge** by Team **[EXO-BREN]**  
-- [Beto]  
+- [Alberto]  
 - [Angel]  
 - [Irving]  
 - [Moises]  
